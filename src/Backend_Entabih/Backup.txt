@@ -1,0 +1,80 @@
+from detector import detect_fraud, FraudCheckRequest, FraudCheckResponse
+
+
+# Detector
+@app.post("/detect", response_model=FraudCheckResponse)
+async def detect(request: FraudCheckRequest):
+    return await detect_fraud(request)
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
+
+
+    
+@app.get("/test")
+def test_message():
+    print("Backend message: FastAPI is working!")  # This will appear in the terminal
+    return {"message": "No God except Allah!"}  # This will appear in React Native
+
+
+OPENROUTER_API_KEY=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
+
+--------------------------------------------------------------------
+main.py:
+
+# uvicorn main:app --reload --host 0.0.0.0 --port 8000
+from fastapi import FastAPI, HTTPException, Depends
+from fastapi.middleware.cors import CORSMiddleware
+# from pydantic import BaseModel
+# from sqlalchemy.orm import Session
+from detector import detect_fraud, FraudCheckRequest, FraudCheckResponse
+from fastapi import FastAPI
+from database import Base, engine
+from models import users, reports, feedbacks
+
+Base.metadata.create_all(bind=engine)
+
+
+app = FastAPI()
+
+# السماح للواجهة (React Native)
+app.add_middleware( 
+    CORSMiddleware,
+    allow_origins=["*"],  #  In production, replace with specific origins
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app = FastAPI()
+
+app.include_router(users.router)
+app.include_router(reports.router)
+app.include_router(feedbacks.router)
+
+
+
+# Detector
+@app.post("/detect", response_model=FraudCheckResponse)
+async def detect(request: FraudCheckRequest):
+    return await detect_fraud(request)
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
+
+
+    
+@app.get("/test")
+def test_message():
+    print("Backend message: FastAPI is working!")  # This will appear in the terminal
+    return {"message": "No God except Allah!"}  # This will appear in React Native
+
+
+# Register new user 
+
+
+# Login
+
+---------------------------------------

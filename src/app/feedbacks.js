@@ -1,0 +1,134 @@
+// app/feedbacks.js
+// شاشة التقييم - بدون expo-font
+
+import React, { useState } from 'react';
+import {
+  View, Text, TouchableOpacity, TextInput, StyleSheet,
+  StatusBar, ScrollView, Alert, I18nManager, Animated,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuth } from './context/AuthContext';
+import ENV from '../config';
+
+I18nManager.allowRTL(true);
+I18nManager.forceRTL(true);
+
+export default function FeedbackScreen({ navigation }) {
+  const [feedback, setFeedback] = useState('');
+  const [selectedTag, setSelectedTag] = useState('');
+  const [rating, setRating] = useState(null);
+  const [selectedEmoji, setSelectedEmoji] = useState(null);
+  const [buttonScale] = useState(new Animated.Value(1));
+  const { user } = useAuth();
+
+  const handleSubmit = async () => {
+    if (!user) {
+      Alert.alert('تسجيل الدخول مطلوب', 'يجب تسجيل الدخول قبل إرسال رأيك.', [
+        { text: 'إلغاء', style: 'cancel' },
+        { text: 'تسجيل الدخول', onPress: () => navigation.navigate('Login') },
+      ]);
+      return;
+    }
+    if (!feedback || !selectedTag || rating === null) {
+      Alert.alert('تنبيه', 'يرجى ملء جميع الحقول!');
+      return;
+    }
+    try {
+      const response = await fetch(`${ENV.FASTAPI_URL}/feedbacks/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ feedback_text: feedback, selected_tag: selectedTag, rating }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        Alert.alert('تم الإرسال', '✅ تم إرسال رأيك بنجاح! شكراً لتعاونك.');
+        setFeedback(''); setSelectedTag(''); setRating(null); setSelectedEmoji(null);
+        setTimeout(() => navigation.replace('MainTabs'), 1000);
+      } else {
+        Alert.alert('خطأ', data.detail || 'حدث خطأ ما، حاول مرة أخرى.');
+      }
+    } catch {
+      Alert.alert('خطأ', 'حدث خطأ أثناء إرسال التعليق، تأكد من الاتصال بالإنترنت.');
+    }
+  };
+
+  const handleTagPress = (tagLabel) => {
+    setSelectedTag(tagLabel);
+    Animated.sequence([
+      Animated.timing(buttonScale, { toValue: 0.95, duration: 100, useNativeDriver: true }),
+      Animated.timing(buttonScale, { toValue: 1, duration: 100, useNativeDriver: true }),
+    ]).start();
+  };
+
+  const emojis = [{ emoji: '☹️', value: 1 }, { emoji: '😐', value: 3 }, { emoji: '😊', value: 5 }];
+  const feedbackTags = [
+    { id: 'speed', label: 'السرعة والكفاءة' },
+    { id: 'service', label: 'الخدمة الشاملة' },
+    { id: 'support', label: 'دعم العملاء' },
+    { id: 'fraud', label: 'دقة الكشف عن الاحتيال' },
+    { id: 'other', label: 'آخر' },
+  ];
+
+  return (
+    <SafeAreaView style={styles.safeContainer}>
+      <StatusBar backgroundColor="#003c3c" barStyle="light-content" />
+      <View style={styles.topBar}>
+        <View style={styles.textcontainer}>
+          <TouchableOpacity onPress={() => navigation.replace('MainTabs')}>
+            <Text style={styles.backText}>{'< رجوع'}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+      <ScrollView contentContainerStyle={styles.content}>
+        <Text style={styles.title}>أخبرنا برأيك</Text>
+        <View style={styles.emojiRow}>
+          {emojis.map((item, index) => (
+            <TouchableOpacity key={index} onPress={() => { setRating(item.value); setSelectedEmoji(item.emoji); }}>
+              <Text style={[styles.emoji, selectedEmoji === item.emoji && styles.selectedEmoji]}>{item.emoji}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <Text style={styles.question}>ما الذي يجب أن نحسّنه؟</Text>
+        <View style={styles.tagsContainer}>
+          {feedbackTags.map((item) => (
+            <TouchableOpacity key={item.id} style={[styles.tagButton, selectedTag === item.label && styles.selectedTagButton]} onPress={() => handleTagPress(item.label)} activeOpacity={0.8}>
+              <Text style={[styles.tagText, selectedTag === item.label && styles.selectedTagText]}>{item.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <Text style={styles.note}>من فضلك ، عبّر برأيك عن التطبيق</Text>
+        <TextInput style={styles.textArea} placeholder="أخبرنا بالمزيد عن تجربتك..." placeholderTextColor="#8A8A8A" multiline numberOfLines={5} value={feedback} onChangeText={setFeedback} />
+        <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
+          <Text style={styles.submitText}>ارسل</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.cancelButton} onPress={() => navigation.replace('MainTabs')}>
+          <Text style={styles.cancelText}>إلغاء</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  safeContainer: { flex: 1, backgroundColor: '#F5F7FA' },
+  topBar: { backgroundColor: '#003D4D', paddingHorizontal: 20, paddingVertical: 55, marginTop: -50, alignItems: 'flex-end' },
+  textcontainer: { marginBottom: -40 },
+  backText: { color: '#fff', fontSize: 20, fontWeight: '600', fontFamily: 'Changa-SemiBold' },
+  content: { padding: 15, paddingBottom: 30, alignItems: 'center' },
+  title: { color: '#003D4D', fontSize: 22, marginTop: 10, marginBottom: 12, textAlign: 'right', fontFamily: 'Changa-SemiBold' },
+  emojiRow: { flexDirection: 'row', justifyContent: 'space-between', width: '60%', marginTop: 5, marginBottom: 10 },
+  emoji: { fontSize: 36, opacity: 0.6 },
+  selectedEmoji: { opacity: 1, transform: [{ scale: 1.3 }] },
+  question: { fontSize: 16, marginTop: 15, marginBottom: 10, color: '#333', textAlign: 'right', fontFamily: 'Changa-SemiBold' },
+  tagsContainer: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', marginVertical: 10, width: '100%', paddingHorizontal: 5 },
+  tagButton: { backgroundColor: '#F9FCFD', borderWidth: 1.5, borderColor: '#003D4D', borderRadius: 20, paddingVertical: 8, paddingHorizontal: 16, margin: 5, elevation: 1 },
+  selectedTagButton: { backgroundColor: '#003D4D', borderColor: '#002a2a' },
+  tagText: { color: '#003c3c', fontSize: 14, fontWeight: '500', fontFamily: 'Changa-SemiBold' },
+  selectedTagText: { color: '#ffffff' },
+  note: { marginTop: 15, marginBottom: 6, textAlign: 'right', color: '#333', fontSize: 14, fontFamily: 'Changa-SemiBold' },
+  textArea: { borderColor: '#003c3c', borderWidth: 1.5, borderRadius: 10, width: '100%', padding: 12, textAlignVertical: 'top', textAlign: 'right', fontSize: 14, minHeight: 100, backgroundColor: '#FFFFFF' },
+  submitButton: { backgroundColor: '#003D4D', marginTop: 20, paddingVertical: 12, paddingHorizontal: 45, borderRadius: 10, elevation: 3 },
+  submitText: { color: '#fff', fontSize: 16, fontWeight: 'bold', fontFamily: 'Changa-SemiBold' },
+  cancelButton: { marginTop: 8, paddingVertical: 10, paddingHorizontal: 45, borderRadius: 10, borderColor: '#888', borderWidth: 1.2 },
+  cancelText: { color: '#444', fontSize: 15, textAlign: 'center', fontFamily: 'Changa-SemiBold' },
+});
