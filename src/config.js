@@ -5,7 +5,7 @@
 // جهاز حقيقي   : 'http://192.168.X.X:8000'
 
 const ENV = {
-  FASTAPI_URL: 'http://192.168.1.10:8000',
+  FASTAPI_URL: 'http://IP:8000',
 };
 
 export default ENV;
